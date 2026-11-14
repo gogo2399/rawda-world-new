@@ -1,0 +1,346 @@
+
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RAWDA | روضة</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;overflow:hidden;background:#101b1b;color:#fff;font-family:Arial,sans-serif}
+#scene{position:fixed;inset:0}
+#topbar{position:fixed;top:14px;left:14px;right:14px;display:flex;justify-content:space-between;align-items:center;z-index:5;pointer-events:none}
+.brand{font-size:22px;font-weight:bold;letter-spacing:3px;text-shadow:0 2px 8px #000}
+#status{font-size:12px;background:#10251dcc;padding:9px 13px;border:1px solid #ffffff33;border-radius:20px}
+#map{position:fixed;right:14px;top:65px;width:190px;height:190px;border:1px solid #ffffff77;border-radius:12px;background:#10251ddd;z-index:5;overflow:hidden}
+#map canvas{width:100%;height:100%;display:block}
+#maplabel{position:absolute;top:6px;left:8px;font-size:10px;color:#fff;pointer-events:none}
+#panel{position:fixed;left:14px;bottom:18px;z-index:5;background:#10251dcc;border:1px solid #ffffff33;border-radius:12px;padding:12px;max-width:230px}
+#panel strong{display:block;margin-bottom:6px;color:#d9e9d4}
+#panel p{font-size:12px;line-height:1.6;margin:0;color:#e4e9df}
+#help{position:fixed;bottom:18px;right:14px;z-index:5;background:#10251dcc;border:1px solid #ffffff33;border-radius:12px;padding:10px;font-size:11px;line-height:1.8}
+#joy{display:none;position:fixed;bottom:30px;left:50%;transform:translateX(-50%);width:115px;height:115px;border-radius:50%;background:#ffffff22;border:2px solid #ffffff66;z-index:8;touch-action:none}
+#knob{position:absolute;width:43px;height:43px;left:34px;top:34px;border-radius:50%;background:#dce9d4cc}
+#hint{position:fixed;inset:0;display:grid;place-items:center;background:#07110dcc;z-index:10;text-align:center;padding:25px}
+#hint button{background:#d7e7c9;color:#17261b;border:0;border-radius:25px;padding:13px 25px;font-size:16px;font-weight:bold}
+#hint p{line-height:1.8;color:#e4eadf;max-width:420px}
+@media(max-width:700px){#map{width:145px;height:145px}#help{display:none}#joy{display:block}#panel{max-width:190px}}
+</style>
+</head>
+<body>
+<div id="scene"></div>
+<div id="topbar">
+  <div class="brand">RAWDA</div>
+  <div id="status">عالم روضة · وضع الاستكشاف</div>
+</div>
+<div id="map"><div id="maplabel">خريطة روضة</div><canvas id="mapcanvas" width="380" height="380"></canvas></div>
+<div id="panel">
+  <strong id="region">البيت الرئيسي</strong>
+  <p id="description">أهلًا بك في روضة. عالم طبيعي واحد متصل، استكشفه على راحتك.</p>
+</div>
+<div id="help">W A S D : حركة<br>الماوس : تحريك الكاميرا<br>اضغط على الخريطة لاختيار منطقة</div>
+<div id="joy"><div id="knob"></div></div>
+<div id="hint">
+ <div>
+  <div style="font-size:38px;letter-spacing:5px">RAWDA</div>
+  <p>مرحبًا بك في عالم روضة.<br>عالم واحد متصل، شتاء هادئ، طبيعة واسعة، وطرق مفتوحة للاستكشاف.</p>
+  <button id="start">ابدأ الاستكشاف</button>
+ </div>
+</div>
+
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}
+</script>
+<script type="module">
+import * as THREE from "three";
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xa9c6d0);
+scene.fog = new THREE.FogExp2(0xa9c6d0,0.0018);
+
+const camera = new THREE.PerspectiveCamera(65,innerWidth/innerHeight,0.1,1800);
+camera.position.set(0,12,28);
+
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth,innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.1;
+document.getElementById("scene").appendChild(renderer.domElement);
+
+scene.add(new THREE.HemisphereLight(0xd9efff,0x526044,2.0));
+const sun=new THREE.DirectionalLight(0xfff1d6,2.4);
+sun.position.set(-120,180,90);
+sun.castShadow=true;
+sun.shadow.mapSize.set(2048,2048);
+sun.shadow.camera.left=-180;sun.shadow.camera.right=180;
+sun.shadow.camera.top=180;sun.shadow.camera.bottom=-180;
+scene.add(sun);
+
+const mat=(color,roughness=1)=>new THREE.MeshStandardMaterial({color,roughness});
+const grass=mat(0x64865a),darkGrass=mat(0x405f42),sand=mat(0xd4c39b);
+const wood=mat(0x79553a),stone=mat(0x777e77),snow=mat(0xe7f1f3);
+const rose=mat(0x9c263d),leaf=mat(0x315d3b);
+const waterMat=new THREE.MeshStandardMaterial({color:0x397f91,roughness:0.23,metalness:0.15});
+
+function ground(x,z,w,d,color=0x64865a){
+ const m=new THREE.Mesh(new THREE.PlaneGeometry(w,d,30,30),mat(color));
+ m.rotation.x=-Math.PI/2;m.position.set(x,0,z);m.receiveShadow=true;scene.add(m);return m;
+}
+ground(0,0,900,900);
+
+function hill(x,z,r,h,color=0x52784c){
+ const m=new THREE.Mesh(new THREE.SphereGeometry(1,24,16),mat(color));
+ m.position.set(x,h*.25,z);m.scale.set(r,h,r*1.1);m.castShadow=true;m.receiveShadow=true;scene.add(m);
+}
+for(let i=0;i<42;i++){
+ const a=i/42*Math.PI*2;
+ hill(Math.cos(a)*260,Math.sin(a)*260,35+Math.random()*35,18+Math.random()*25,0x58794e);
+}
+
+function water(x,z,w,d,rotation=0){
+ const m=new THREE.Mesh(new THREE.PlaneGeometry(w,d,30,30),waterMat);
+ m.rotation.x=-Math.PI/2;m.rotation.z=rotation;m.position.set(x,.18,z);scene.add(m);
+ return m;
+}
+// البحر شمال العالم
+water(0,-320,620,260);
+// النيل شرق المركز
+water(115,25,65,520,.12);
+// بحيرة الجنوب الشرقي
+water(205,180,105,85);
+
+// الشاطئ
+ground(0,-175,600,65,0xd2c39e);
+
+// ممرات طبيعية
+function path(x,z,w,d){
+ const p=new THREE.Mesh(new THREE.PlaneGeometry(w,d),mat(0xa99a7d));
+ p.rotation.x=-Math.PI/2;p.position.set(x,.04,z);scene.add(p);
+}
+path(0,0,15,380);path(0,-170,15,190);path(100,0,140,12);
+path(-100,40,180,10);path(0,130,180,10);
+
+// الأشجار
+function tree(x,z,s=1,type=0){
+ const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.35*s,.6*s,5*s,8),wood);
+ trunk.position.set(x,2.5*s,z);trunk.castShadow=true;scene.add(trunk);
+ const colors=[0x31583b,0x456e43,0x567a4b,0x294c3a];
+ for(let j=0;j<3;j++){
+  const crown=new THREE.Mesh(new THREE.SphereGeometry((3.1-j*.35)*s,12,10),mat(colors[(j+type)%4]));
+  crown.position.set(x+(Math.random()-.5)*1.2*s,5.2*s+j*1.5*s,z+(Math.random()-.5)*1.2*s);
+  crown.scale.y=1.3;crown.castShadow=true;scene.add(crown);
+ }
+}
+for(let i=0;i<170;i++){
+ const x=-300+Math.random()*600,z=-300+Math.random()*600;
+ if(Math.abs(x)<65&&Math.abs(z)<65)continue;
+ if(z> -205&&z< -145)continue;
+ if(x>75&&x<155)continue;
+ tree(x,z,.7+Math.random()*.8,i%4);
+}
+
+// صخور طبيعية
+for(let i=0;i<55;i++){
+ const x=-280+Math.random()*560,z=-280+Math.random()*560;
+ const r=1+Math.random()*3;
+ const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(r,1),stone);
+ rock.position.set(x,r*.4,z);rock.scale.y=.6;rock.rotation.set(Math.random(),Math.random(),Math.random());
+ rock.castShadow=true;scene.add(rock);
+}
+
+// الورود
+function flower(x,z){
+ const stem=new THREE.Mesh(new THREE.CylinderGeometry(.035,.05,.8,5),leaf);
+ stem.position.set(x,.4,z);scene.add(stem);
+ const bloom=new THREE.Mesh(new THREE.SphereGeometry(.28,10,8),rose);
+ bloom.position.set(x,.9,z);bloom.scale.set(1,.7,1);scene.add(bloom);
+}
+for(let i=0;i<260;i++){
+ const x=170+Math.random()*115,z=-100+Math.random()*190;
+ flower(x,z);
+}
+
+// الغابة الغربية
+for(let i=0;i<90;i++)tree(-180+Math.random()*105,-180+Math.random()*340,1.1+Math.random(),i%4);
+
+// جبل الثلج
+const mountain=new THREE.Mesh(new THREE.ConeGeometry(75,125,9),snow);
+mountain.position.set(-180,62,190);mountain.castShadow=true;scene.add(mountain);
+const icePal=new THREE.Mesh(new THREE.BoxGeometry(35,22,25),mat(0xb7dce8));
+icePal.position.set(-180,12,90);scene.add(icePal);
+for(let i=0;i<5;i++){
+ const tower=new THREE.Mesh(new THREE.ConeGeometry(4,18,5),snow);
+ tower.position.set(-195+i*7,28,90);scene.add(tower);
+}
+
+// الشلالات والجدول غرب الجنوب
+water(-230,170,25,160);
+for(let i=0;i<8;i++){
+ const b=new THREE.Mesh(new THREE.DodecahedronGeometry(5,1),stone);
+ b.position.set(-245+i*5,2,100+i*12);scene.add(b);
+}
+
+// البيت الرئيسي
+function house(x,z,scale=1,color=0x79553a){
+ const base=new THREE.Mesh(new THREE.BoxGeometry(24*scale,14*scale,18*scale),mat(color));
+ base.position.set(x,7*scale,z);base.castShadow=true;scene.add(base);
+ const roof=new THREE.Mesh(new THREE.ConeGeometry(17*scale,10*scale,4),mat(0x453b32));
+ roof.rotation.y=Math.PI/4;roof.position.set(x,19*scale,z);roof.castShadow=true;scene.add(roof);
+ for(let i=-1;i<=1;i++){
+  const win=new THREE.Mesh(new THREE.BoxGeometry(2.5*scale,4*scale,.3),mat(0x9ac6c9));
+  win.position.set(x+i*6*scale,8*scale,z+9.2*scale);scene.add(win);
+ }
+}
+house(0,0,1.25);
+
+// قصر رحمة على التل
+hill(65,-55,35,16,0x658752);
+house(65,-55,.95,0xe8dfc9);
+const gold=mat(0xb99b53);
+for(let i=0;i<3;i++){
+ const tower=new THREE.Mesh(new THREE.CylinderGeometry(3,4,22,12),mat(0xf0e9d8));
+ tower.position.set(50+i*14,22,-55);scene.add(tower);
+ const tip=new THREE.Mesh(new THREE.ConeGeometry(4,9,8),gold);
+ tip.position.set(50+i*14,37,-55);scene.add(tip);
+}
+
+// مظلة كوخ الشاطئ
+house(-100,-220,.55,0x8a6547);
+
+// شمس وقمر
+const moon=new THREE.Mesh(new THREE.SphereGeometry(9,24,20),mat(0xf5f1dc));
+moon.position.set(180,145,-260);scene.add(moon);
+
+// مناطق الخريطة
+const regions=[
+ {name:"البيت الرئيسي",desc:"البيت الخشبي الألماني في قلب روضة.",x:0,z:0},
+ {name:"بارادايس",desc:"حديقة الورود الواسعة وسماء المطر الهادئ.",x:225,z:-20},
+ {name:"النيل والتلال",desc:"مروج خضراء ومياه النيل وموطن رعد وقطيعه.",x:115,z:25},
+ {name:"البحر والشاطئ",desc:"شاطئ رملي نظيف وبحر ممتد حتى الأفق.",x:0,z:-320},
+ {name:"الغابة",desc:"أشجار عالية ومسارات ترابية وجدول مائي.",x:-180,z:0},
+ {name:"منطقة الثلج",desc:"جبل جليدي وقصر ثلجي في الجنوب الغربي.",x:-180,z:190},
+ {name:"الشلالات",desc:"مياه متدفقة وصخور ومسارات هادئة.",x:-230,z:170},
+ {name:"البحيرة",desc:"بحيرة هادئة محاطة بالمروج والأزهار.",x:205,z:180},
+ {name:"قصر رحمة",desc:"قصر أبيض وذهبي على تل أخضر.",x:65,z:-55}
+];
+
+const mapCanvas=document.getElementById("mapcanvas");
+const ctx=mapCanvas.getContext("2d");
+function drawMap(){
+ ctx.clearRect(0,0,380,380);
+ ctx.fillStyle="#315b4c";ctx.fillRect(0,0,380,380);
+ // البحر
+ ctx.fillStyle="#397b8d";ctx.fillRect(0,0,380,75);
+ // النيل
+ ctx.fillStyle="#397b8d";ctx.fillRect(230,65,25,280);
+ // بحيرة
+ ctx.beginPath();ctx.ellipse(300,300,35,24,0,0,Math.PI*2);ctx.fill();
+ // الغابة
+ ctx.fillStyle="#234a36";ctx.fillRect(0,110,95,190);
+ // الثلج
+ ctx.fillStyle="#c9e4e9";ctx.beginPath();ctx.arc(70,320,42,0,Math.PI*2);ctx.fill();
+ // المسارات
+ ctx.strokeStyle="#c4b28b";ctx.lineWidth=5;ctx.beginPath();
+ ctx.moveTo(190,190);ctx.lineTo(190,80);ctx.lineTo(190,35);
+ ctx.moveTo(190,190);ctx.lineTo(245,190);ctx.lineTo(300,190);
+ ctx.moveTo(190,190);ctx.lineTo(80,190);ctx.lineTo(60,250);
+ ctx.stroke();
+ regions.forEach((r,i)=>{
+  const px=190+r.x*.48,py=190+r.z*.48;
+  ctx.fillStyle="#f4dfb0";ctx.beginPath();ctx.arc(px,py,6,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle="#fff";ctx.font="11px Arial";ctx.fillText(r.name,px+8,py-6);
+ });
+}
+drawMap();
+
+function selectRegion(r){
+ document.getElementById("region").textContent=r.name;
+ document.getElementById("description").textContent=r.desc;
+ target.set(r.x,0,r.z);
+}
+const target=new THREE.Vector3(0,0,0);
+const mapRect=mapCanvas.getBoundingClientRect();
+mapCanvas.addEventListener("click",e=>{
+ const rect=mapCanvas.getBoundingClientRect();
+ const mx=(e.clientX-rect.left)/rect.width*380;
+ const my=(e.clientY-rect.top)/rect.height*380;
+ let nearest=null,dist=Infinity;
+ regions.forEach(r=>{
+  const x=190+r.x*.48,y=190+r.z*.48,d=Math.hypot(x-mx,y-my);
+  if(d<dist){dist=d;nearest=r;}
+ });
+ if(nearest)selectRegion(nearest);
+});
+
+// تحكم اللاعب والكاميرا
+const keys={};
+addEventListener("keydown",e=>keys[e.key.toLowerCase()]=true);
+addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
+let yaw=0,pitch=-.15;
+let dragging=false,lastX=0,lastY=0;
+renderer.domElement.addEventListener("pointerdown",e=>{
+ dragging=true;lastX=e.clientX;lastY=e.clientY;
+});
+addEventListener("pointerup",()=>dragging=false);
+addEventListener("pointermove",e=>{
+ if(!dragging||e.pointerType==="touch")return;
+ yaw-=(e.clientX-lastX)*.004;
+ pitch=Math.max(-.65,Math.min(.45,pitch-(e.clientY-lastY)*.003));
+ lastX=e.clientX;lastY=e.clientY;
+});
+
+// عصا الهاتف
+const joy=document.getElementById("joy"),knob=document.getElementById("knob");
+let joyX=0,joyY=0;
+joy.addEventListener("pointerdown",e=>joy.setPointerCapture(e.pointerId));
+joy.addEventListener("pointermove",e=>{
+ if(!joy.hasPointerCapture(e.pointerId))return;
+ const r=joy.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;
+ let dx=e.clientX-cx,dy=e.clientY-cy,l=Math.hypot(dx,dy),max=35;
+ if(l>max){dx=dx/l*max;dy=dy/l*max;}
+ joyX=dx/max;joyY=dy/max;
+ knob.style.transform=`translate(${dx}px,${dy}px)`;
+});
+function resetJoy(){joyX=joyY=0;knob.style.transform="translate(0,0)"}
+joy.addEventListener("pointerup",resetJoy);
+joy.addEventListener("pointercancel",resetJoy);
+
+let started=false;
+document.getElementById("start").onclick=()=>{
+ started=true;document.getElementById("hint").style.display="none";
+};
+const clock=new THREE.Clock();
+function animate(){
+ requestAnimationFrame(animate);
+ const dt=Math.min(clock.getDelta(),.04);
+ if(started){
+  const forward=(keys.w||keys.arrowup?1:0)-(keys.s||keys.arrowdown?1:0)-joyY;
+  const side=(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0)+joyX;
+  const speed=35*dt;
+  const dir=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw));
+  const right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));
+  camera.position.addScaledVector(dir,forward*speed);
+  camera.position.addScaledVector(right,side*speed);
+ }
+ const look=new THREE.Vector3(
+  camera.position.x-Math.sin(yaw)*40,
+  camera.position.y+Math.sin(pitch)*40,
+  camera.position.z-Math.cos(yaw)*40
+ );
+ camera.lookAt(look);
+ // حركة سطح الماء
+ waterMat.color.setHSL(.53,.38,.39+Math.sin(clock.elapsedTime*.6)*.015);
+ renderer.render(scene,camera);
+}
+animate();
+
+addEventListener("resize",()=>{
+ camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
+ renderer.setSize(innerWidth,innerHeight);
+});
+</script>
+</body>
+</html>
