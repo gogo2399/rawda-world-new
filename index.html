@@ -319,7 +319,7 @@ renderer.domElement.addEventListener("pointerdown",e=>{
 addEventListener("pointerup",()=>dragging=false);
 addEventListener("pointermove",e=>{
  if(!dragging)return;
- yaw-=(e.clientX-lastX)*.004;
+ yaw-=(e.clientX-lastX)*.009;
  pitch=Math.max(-.65,Math.min(.45,pitch-(e.clientY-lastY)*.003));
  lastX=e.clientX;lastY=e.clientY;
 });
