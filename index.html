@@ -165,39 +165,46 @@ for(let i=0;i<260;i++){
 
 // الغابة الغربية
 for(let i=0;i<90;i++)tree(-180+Math.random()*105,-180+Math.random()*340,1.1+Math.random(),i%4);
-// شجرة البلوط الواقعية
+// اختبار تحميل شجرة البلوط
 const treeLoader = new GLTFLoader();
+const status = document.getElementById("status");
 
-treeLoader.load('./tree_oak_2.glb', (gltf) => {
-  const oak = gltf.scene;
+status.textContent = "جاري تحميل الشجرة...";
 
-  oak.updateMatrixWorld(true);
+treeLoader.load(
+  "./tree_oak_2.glb",
+  (gltf) => {
+    const oak = gltf.scene;
+    const box = new THREE.Box3().setFromObject(oak);
+    const size = box.getSize(new THREE.Vector3());
 
-  const box = new THREE.Box3().setFromObject(oak);
-  const size = box.getSize(new THREE.Vector3());
-
-  const targetHeight = 12;
-  oak.scale.setScalar(targetHeight / size.y);
-
-  oak.updateMatrixWorld(true);
-
-  const scaledBox = new THREE.Box3().setFromObject(oak);
-  oak.position.y -= scaledBox.min.y;
-
-  oak.position.x = -180;
-  oak.position.z = 0;
-
-  oak.traverse((child) => {
-    if (child.isMesh) {
-      child.castShadow = true;
-      child.receiveShadow = true;
+    if (!size.y || !Number.isFinite(size.y)) {
+      status.textContent = "خطأ: أبعاد الشجرة غير صالحة";
+      return;
     }
-  });
 
-  scene.add(oak);
-}, undefined, (error) => {
-  console.error('Tree loading error:', error);
-});
+    oak.scale.setScalar(12 / size.y);
+    oak.position.set(0, 0, -12);
+
+    const scaledBox = new THREE.Box3().setFromObject(oak);
+    oak.position.y -= scaledBox.min.y;
+
+    oak.traverse((child) => {
+      if (child.isMesh) {
+        child.castShadow = true;
+        child.receiveShadow = true;
+      }
+    });
+
+    scene.add(oak);
+    status.textContent = "تم تحميل الشجرة بنجاح";
+  },
+  undefined,
+  (error) => {
+    console.error(error);
+    status.textContent = "فشل تحميل الشجرة، راجع الرابط";
+  }
+);
 // جبل الثلج
 const mountain=new THREE.Mesh(new THREE.ConeGeometry(75,125,9),snow);
 mountain.position.set(-180,62,190);mountain.castShadow=true;scene.add(mountain);
