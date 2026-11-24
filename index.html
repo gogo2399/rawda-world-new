@@ -206,10 +206,6 @@ function hill(x,z,r,h,color=0x52784c){
  const m=new THREE.Mesh(new THREE.SphereGeometry(1,24,16),mat(color));
  m.position.set(x,h*.25,z);m.scale.set(r,h,r*1.1);m.castShadow=true;m.receiveShadow=true;scene.add(m);
 }
-for(let i=0;i<42;i++){
- const a=i/42*Math.PI*2;
- hill(Math.cos(a)*260,Math.sin(a)*260,35+Math.random()*35,18+Math.random()*25,0x58794e);
-}
 
 function water(x,z,w,d,rotation=0){
  const m=new THREE.Mesh(new THREE.PlaneGeometry(w,d,30,30),waterMat);
