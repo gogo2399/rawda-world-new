@@ -56,9 +56,9 @@ import * as THREE from "three";
 import { GLTFLoader } from "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js";
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xa9c6d0);
-scene.fog = new THREE.FogExp2(0xa9c6d0,0.0018);
+scene.fog = new THREE.FogExp2(0xa9c6d0,0.00006);
 
-const camera = new THREE.PerspectiveCamera(65,innerWidth/innerHeight,0.1,1800);
+const camera = new THREE.PerspectiveCamera(65,innerWidth/innerHeight,0.1,50000);
 camera.position.set(0,12,28);
 
 const renderer = new THREE.WebGLRenderer({antialias:true});
@@ -89,7 +89,78 @@ function ground(x,z,w,d,color=0x64865a){
  const m=new THREE.Mesh(new THREE.PlaneGeometry(w,d,30,30),mat(color));
  m.rotation.x=-Math.PI/2;m.position.set(x,0,z);m.receiveShadow=true;scene.add(m);return m;
 }
-ground(0,0,900,900);
+
+// التضاريس الأساسية لعالم روضة
+function createRawdaTerrain() {
+  const worldSize = 50000;
+  const segments = 400;
+
+  const geometry = new THREE.PlaneGeometry(
+    worldSize,
+    worldSize,
+    segments,
+    segments
+  );
+
+  const positions = geometry.attributes.position;
+
+  function hillHeight(x, z, cx, cz, radius, height) {
+    const distance = Math.hypot(x - cx, z - cz);
+    const t = Math.max(0, 1 - distance / radius);
+    const smooth = t * t * (3 - 2 * t);
+    return height * smooth;
+  }
+
+  for (let i = 0; i < positions.count; i++) {
+    const x = positions.getX(i);
+    const z = -positions.getY(i);
+
+    const distanceFromCenter = Math.hypot(x, z);
+
+    // منطقة انتقالية تحافظ على استواء مركز روضة
+    const fade = Math.max(
+      0,
+      Math.min(1, (distanceFromCenter - 700) / 1800)
+    );
+
+    let height = 0;
+
+    // تموجات أرضية واسعة
+    height += Math.sin(x * 0.00045) * 110;
+    height += Math.cos(z * 0.00038) * 95;
+    height += Math.sin((x + z) * 0.00025) * 75;
+
+    // مرتفعات وتلال بعيدة
+    height += hillHeight(x, z, -9000, -7000, 6500, 650);
+    height += hillHeight(x, z, 10000, -11000, 7000, 850);
+    height += hillHeight(x, z, -12000, 12000, 7500, 550);
+    height += hillHeight(x, z, 14000, 13000, 8000, 700);
+    height += hillHeight(x, z, 0, 19000, 9000, 500);
+    height += hillHeight(x, z, -19000, -16000, 7000, 750);
+
+    // تخفيف التضاريس قرب مركز العالم
+    height *= fade;
+
+    positions.setZ(i, height);
+  }
+
+  geometry.computeVertexNormals();
+
+  const terrainMaterial = new THREE.MeshStandardMaterial({
+    color: 0x64865a,
+    roughness: 1
+  });
+
+  const terrain = new THREE.Mesh(geometry, terrainMaterial);
+  terrain.rotation.x = -Math.PI / 2;
+  terrain.receiveShadow = true;
+  terrain.name = "Rawda_Main_Terrain";
+
+  scene.add(terrain);
+}
+
+createRawdaTerrain();
+  
 
 function hill(x,z,r,h,color=0x52784c){
  const m=new THREE.Mesh(new THREE.SphereGeometry(1,24,16),mat(color));
