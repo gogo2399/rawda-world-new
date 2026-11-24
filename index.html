@@ -158,48 +158,6 @@ function createRawdaTerrain() {
 
 createRawdaTerrain();
 
-    const fade = Math.max(
-      0,
-      Math.min(1, (distanceFromCenter - 700) / 1800)
-    );
-
-    let height = 0;
-
-    // تموجات أرضية واسعة
-    height += Math.sin(x * 0.00045) * 110;
-    height += Math.cos(z * 0.00038) * 95;
-    height += Math.sin((x + z) * 0.00025) * 75;
-
-    // مرتفعات وتلال بعيدة
-    height += hillHeight(x, z, -9000, -7000, 6500, 650);
-    height += hillHeight(x, z, 10000, -11000, 7000, 850);
-    height += hillHeight(x, z, -12000, 12000, 7500, 550);
-    height += hillHeight(x, z, 14000, 13000, 8000, 700);
-    height += hillHeight(x, z, 0, 19000, 9000, 500);
-    height += hillHeight(x, z, -19000, -16000, 7000, 750);
-
-    // تخفيف التضاريس قرب مركز العالم
-    height *= fade;
-
-    positions.setZ(i, height);
-  }
-
-  geometry.computeVertexNormals();
-
-  const terrainMaterial = new THREE.MeshStandardMaterial({
-    color: 0x64865a,
-    roughness: 1
-  });
-
-  const terrain = new THREE.Mesh(geometry, terrainMaterial);
-  terrain.rotation.x = -Math.PI / 2;
-  terrain.receiveShadow = true;
-  terrain.name = "Rawda_Main_Terrain";
-
-  scene.add(terrain);
-}
-
-createRawdaTerrain();
   
 
 function hill(x,z,r,h,color=0x52784c){
