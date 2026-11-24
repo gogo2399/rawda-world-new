@@ -142,22 +142,23 @@ function createRawdaTerrain() {
 
   geometry.computeVertexNormals();
 
-  const terrain = new THREE.Mesh(
-    geometry,
-    new THREE.MeshStandardMaterial({
-  map: grassTexture,
-  roughness: 1
-})
-    })
-  );
+  
+const terrain = new THREE.Mesh(
+  geometry,
+  new THREE.MeshStandardMaterial({
+    map: grassTexture,
+    roughness: 1
+  })
+);
+
 
   terrain.rotation.x = -Math.PI / 2;
   terrain.receiveShadow = true;
   terrain.name = "Rawda_Main_Terrain";
   scene.add(terrain);
 }
-function createGrassTexture() {
 
+  
 function createGrassTexture() {
   const canvas = document.createElement("canvas");
   canvas.width = 512;
@@ -203,7 +204,6 @@ function createGrassTexture() {
   return texture;
 }
 
-}
 
 const grassTexture = createGrassTexture();
 createRawdaTerrain();
