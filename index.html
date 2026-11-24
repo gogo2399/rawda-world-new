@@ -145,8 +145,9 @@ function createRawdaTerrain() {
   const terrain = new THREE.Mesh(
     geometry,
     new THREE.MeshStandardMaterial({
-      color: 0x718c62,
-      roughness: 1
+  map: grassTexture,
+  roughness: 1
+})
     })
   );
 
@@ -155,7 +156,34 @@ function createRawdaTerrain() {
   terrain.name = "Rawda_Main_Terrain";
   scene.add(terrain);
 }
+function createGrassTexture() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 512;
+  canvas.height = 512;
 
+  const ctx = canvas.getContext("2d");
+  const image = ctx.createImageData(512, 512);
+
+  for (let i = 0; i < image.data.length; i += 4) {
+    const n = Math.random();
+    image.data[i] = 65 + n * 35;
+    image.data[i + 1] = 85 + n * 55;
+    image.data[i + 2] = 42 + n * 25;
+    image.data[i + 3] = 255;
+  }
+
+  ctx.putImageData(image, 0, 0);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(80, 80);
+  texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+
+  return texture;
+}
+
+const grassTexture = createGrassTexture();
 createRawdaTerrain();
 
   
