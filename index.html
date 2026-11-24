@@ -157,30 +157,52 @@ function createRawdaTerrain() {
   scene.add(terrain);
 }
 function createGrassTexture() {
+
+function createGrassTexture() {
   const canvas = document.createElement("canvas");
   canvas.width = 512;
   canvas.height = 512;
 
   const ctx = canvas.getContext("2d");
-  const image = ctx.createImageData(512, 512);
 
-  for (let i = 0; i < image.data.length; i += 4) {
-    const n = Math.random();
-    image.data[i] = 65 + n * 35;
-    image.data[i + 1] = 85 + n * 55;
-    image.data[i + 2] = 42 + n * 25;
-    image.data[i + 3] = 255;
+  ctx.fillStyle = "#536b3e";
+  ctx.fillRect(0, 0, 512, 512);
+
+  for (let i = 0; i < 9000; i++) {
+    const x = Math.random() * 512;
+    const y = Math.random() * 512;
+
+    ctx.strokeStyle = Math.random() > 0.5
+      ? "#789454"
+      : "#354d2e";
+
+    ctx.globalAlpha = 0.25 + Math.random() * 0.5;
+    ctx.lineWidth = 0.5 + Math.random() * 1.2;
+
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.quadraticCurveTo(
+      x - 2 + Math.random() * 4,
+      y - 4,
+      x - 3 + Math.random() * 6,
+      y - 5 - Math.random() * 9
+    );
+    ctx.stroke();
   }
 
-  ctx.putImageData(image, 0, 0);
+  ctx.globalAlpha = 1;
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
   texture.repeat.set(80, 80);
-  texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  texture.anisotropy = Math.min(
+    renderer.capabilities.getMaxAnisotropy(), 4
+  );
 
   return texture;
+}
+
 }
 
 const grassTexture = createGrassTexture();
